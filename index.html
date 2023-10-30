@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Recognition from Camera</title>
+    <script src="https://cdn.rawgit.com/naptha/tesseract.js/1.0.10/dist/tesseract.js"></script>
+    <style>
+        video {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<video id="camera" autoplay></video>
+<button onclick="captureAndRecognize()">Capture and Recognize</button>
+<div id="result"></div>
+
+<script>
+    const video = document.getElementById('camera');
+    const resultDiv = document.getElementById('result');
+
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+        }
+    }
+
+    function stopCamera() {
+        const stream = video.srcObject;
+        const tracks = stream.getTracks();
+
+        tracks.forEach(track => {
+            track.stop();
+        });
+
+        video.srcObject = null;
+    }
+
+    async function captureAndRecognize() {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+        const result = await recognizeText(imageData);
+        resultDiv.textContent = `Recognized Text: ${result}`;
+    }
+
+    async function recognizeText(imageData) {
+        return new Promise((resolve, reject) => {
+            Tesseract.recognize(
+                imageData,
+                'eng',
+                { logger: info => console.log(info) }
+            ).then(({ data: { text } }) => {
+                resolve(text);
+            }).catch(reject);
+        });
+    }
+
+    // Start the camera when the page loads
+    window.addEventListener('load', startCamera);
+</script>
+
+</body>
+</html>
